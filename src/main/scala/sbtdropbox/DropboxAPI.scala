@@ -12,7 +12,7 @@ import collection.JavaConverters._
 class DropboxAPI(appKey: AppKeyPair, token: AccessTokenPair) {
   type DApi = com.dropbox.client2.DropboxAPI[WebAuthSession]
 
-  lazy val session = new WebAuthSession(appKey, Session.AccessType.APP_FOLDER, token)
+  lazy val session = new WebAuthSession(appKey, DropboxAPI.accessType, token)
   lazy val api:DApi = new com.dropbox.client2.DropboxAPI(session)
 
   def createFolder(path: String, ignoreExisting: Boolean = true):Option[Entry] = {
@@ -33,7 +33,7 @@ class DropboxAPI(appKey: AppKeyPair, token: AccessTokenPair) {
     api.metadata(if (path.startsWith("/")) path else "/"+path, 0, null, true, null).contents.asScala.toList
   }
 
-  def upload(path: String, file: File)(listener: ((Long, Long) => Unit) = null) = {
+  def upload(path: String, file: File)(listener: ((Long, Long) => Unit) = null):Entry = {
     api.putFile(path, new FileInputStream(file), file.length, null, new ProgressListener {
       override def onProgress(bytes: Long, total: Long) { if (listener != null) listener(bytes, total) }
     })
@@ -49,6 +49,7 @@ class DropboxAPI(appKey: AppKeyPair, token: AccessTokenPair) {
 object DropboxAPI {
   val accessTokenKey = "accessTokenPair.key"
   val accessTokenSecret = "accessTokenPair.secret"
+  val accessType = Session.AccessType.DROPBOX
 
   def loadProps(implicit config: File):Properties = {
     val props = new Properties
@@ -76,7 +77,7 @@ object DropboxAPI {
   def obtainToken(appKey: AppKeyPair)(implicit config: File):AccessTokenPair = loadToken.getOrElse(storeToken(linkAccount(appKey)))
 
   def linkAccount(appKey: AppKeyPair):AccessTokenPair = {
-      val was = new WebAuthSession(appKey, Session.AccessType.APP_FOLDER);
+      val was = new WebAuthSession(appKey, accessType);
       val info = was.getAuthInfo
       if (!openUrl(info.url))
         println("Go to: " + info.url)

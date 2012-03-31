@@ -57,6 +57,6 @@ object Dropbox {
     deletePath := "",
     uploadFolder := "",
     dropboxConfig := new File(System.getProperty("user.home"), ".sbt-dropbox-plugin"),
-    dropboxAppKey := new com.dropbox.client2.session.AppKeyPair("7d20vctta697nbi", "a2i52ej60tq1j9y")
+    dropboxAppKey := new com.dropbox.client2.session.AppKeyPair("3b02x88oi3bpa2x", "mwnxdopvusqxdyy")
   )
 }
