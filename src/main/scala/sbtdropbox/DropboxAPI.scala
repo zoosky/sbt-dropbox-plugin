@@ -15,6 +15,8 @@ class DropboxAPI(appKey: AppKeyPair, token: AccessTokenPair) {
   lazy val session = new WebAuthSession(appKey, DropboxAPI.accessType, token)
   lazy val api:DApi = new com.dropbox.client2.DropboxAPI(session)
 
+  def this(appKey: (String, String), token: AccessTokenPair) = this(new AppKeyPair(appKey._1, appKey._2), token)
+
   def createFolder(path: String, ignoreExisting: Boolean = true):Option[Entry] = {
     val codes = if (ignoreExisting) Seq(403) else Seq.empty
 
@@ -74,6 +76,7 @@ object DropboxAPI {
       None
   }
 
+  def obtainToken(appKey: (String, String))(implicit config: File):AccessTokenPair = obtainToken(new AppKeyPair(appKey._1, appKey._2))
   def obtainToken(appKey: AppKeyPair)(implicit config: File):AccessTokenPair = loadToken.getOrElse(storeToken(linkAccount(appKey)))
 
   def linkAccount(appKey: AppKeyPair):AccessTokenPair = {

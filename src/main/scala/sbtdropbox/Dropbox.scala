@@ -15,12 +15,12 @@ object Dropbox {
       val dropboxDelete = TaskKey[Unit]("dropbox-delete")
       val dropboxList   = TaskKey[Seq[Entry]]("dropbox-list")
 
-      val uploadFiles  = TaskKey[Seq[File]]("upload-files")
-      val uploadFolder = SettingKey[String]("upload-folder")
-      val deletePath   = TaskKey[String]("delete-path")
+      val dropboxFiles  = TaskKey[Seq[File]]("dropbox-files")
+      val dropboxFolder = SettingKey[String]("dropbox-folder")
+      val dropboxDeletePath   = TaskKey[String]("dropbox-delete-path")
       val dropboxApi   = TaskKey[DropboxAPI]("dropbox-api")
       val dropboxToken = TaskKey[AccessTokenPair]("dropbox-access-token")
-      val dropboxAppKey = SettingKey[AppKeyPair]("dropbox-appkey")
+      val dropboxAppKey = SettingKey[(String, String)]("dropbox-appkey")
       val dropboxConfig = SettingKey[File]("dropbox-config")
   }
 
@@ -34,7 +34,7 @@ object Dropbox {
   }
 
   lazy val settings = Seq(
-    dropboxUpload <<= (streams, dropboxApi, uploadFiles, uploadFolder) map { (s, api, files, folder) =>
+    dropboxUpload <<= (streams, dropboxApi, dropboxFiles, dropboxFolder) map { (s, api, files, folder) =>
       if (!files.isEmpty) {
         if (!folder.isEmpty) {
           api.createFolder(folder)
@@ -45,12 +45,12 @@ object Dropbox {
       }
     },
 
-    dropboxDelete <<= (streams, dropboxApi, deletePath) map { (s, api, path) =>
+    dropboxDelete <<= (streams, dropboxApi, dropboxDeletePath) map { (s, api, path) =>
        if (path.isEmpty) sys.error("deletePath not set")
        api.delete(path)
     },
 
-    dropboxList <<= (streams, dropboxApi, uploadFolder) map { (s, api, folder) =>
+    dropboxList <<= (streams, dropboxApi, dropboxFolder) map { (s, api, folder) =>
       val entries = api.list(folder)
       entries.foreach(e => s.log.info(String.format("%s%s (%s) %s", e.root, e.path, e.size, e.modified)))
       entries
@@ -59,10 +59,10 @@ object Dropbox {
     dropboxToken <<= (dropboxAppKey, dropboxConfig) map (DropboxAPI.obtainToken(_)(_)),
     dropboxApi <<= (dropboxAppKey, dropboxToken) map (new DropboxAPI(_, _)),
 
-    uploadFiles := Seq.empty,
-    deletePath   := "",
-    uploadFolder := "",
+    dropboxFiles  := Seq.empty,
+    dropboxFolder := "",
+    dropboxDeletePath := "",
     dropboxConfig := new File(System.getProperty("user.home"), ".sbt-dropbox-plugin"),
-    dropboxAppKey := new com.dropbox.client2.session.AppKeyPair("3b02x88oi3bpa2x", "mwnxdopvusqxdyy")
+    dropboxAppKey := ("key", "secret")
   )
 }
