@@ -1,1 +1,1 @@
-* Initial release: upload / delete / list files from your dropbox.
+* Initial release: upload / delete / list files from/to your dropbox.

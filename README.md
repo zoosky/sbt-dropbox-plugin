@@ -5,7 +5,7 @@ Add the following to your `project/plugins.sbt`
 ```
 resolvers ++= Seq(
   Resolver.url("scalasbt", new URL("http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns),
-  Resolver.url("dropbox sdk", new URL("http://jberkel.github.com/sbt-dropbox-plugin/releases"))
+  "dropbox sdk" at "http://jberkel.github.com/sbt-dropbox-plugin/releases"
 )
 
 addSbtPlugin("org.scala-sbt" % "sbt-dropbox-plugin" % "0.1.0")
@@ -31,8 +31,8 @@ Then, from within sbt:
     > dropbox-upload
     > dropbox-list
 
-The first time you use the plugin it will open a browser window where you give the plugin the permission to access your dropbox.
-The token is cached in `~/.sbt-dropbox-plugin`.
+The first time you use the plugin it will open a browser window where you have to give the plugin permission to access
+your dropbox.  The token is then cached in `~/.sbt-dropbox-plugin`.
 
 At the moment you'll have to generate an app key for the plugin yourself - this can be done quite easily at
-[dropbox.com/developers](https://www.dropbox.com/developers).
+[dropbox.com/developers](https://www.dropbox.com/developers) (Go to "My Apps" - then "Create an App").
