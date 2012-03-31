@@ -1,23 +1,28 @@
+package sbtdropbox
+
 import sbt._
-import Keys._
-import com.dropbox.client2.session.{AccessTokenPair, AppKeyPair}
+import sbt.Keys._
 
 object Dropbox {
+  import DropboxKeys._
 
-  val dropboxUpload = TaskKey[Unit]("dropbox-upload")
-  val dropboxDelete = TaskKey[Unit]("dropbox-delete")
-  val dropboxList   = TaskKey[Unit]("dropbox-list")
+  object DropboxKeys {
+      import com.dropbox.client2.session.{AccessTokenPair, AppKeyPair}
 
-  val uploadFile   = TaskKey[File]("upload-file")
-  val deletePath   = TaskKey[String]("delete-path")
-  val uploadFolder = SettingKey[String]("upload-folder")
-  val dropboxApi   = TaskKey[DropboxAPI]("dropbox-api")
-  val dropboxToken = TaskKey[AccessTokenPair]("dropbox-access-token")
-  val dropboxConfig = SettingKey[File]("dropbox-config")
-  val dropboxAppKey = SettingKey[AppKeyPair]("dropbox-appkey")
+      val dropboxUpload = TaskKey[Unit]("dropbox-upload")
+      val dropboxDelete = TaskKey[Unit]("dropbox-delete")
+      val dropboxList   = TaskKey[Unit]("dropbox-list")
+
+      val uploadFile   = TaskKey[File]("upload-file")
+      val uploadFolder = SettingKey[String]("upload-folder")
+      val deletePath   = TaskKey[String]("delete-path")
+      val dropboxApi   = TaskKey[DropboxAPI]("dropbox-api")
+      val dropboxToken = TaskKey[AccessTokenPair]("dropbox-access-token")
+      val dropboxAppKey = SettingKey[AppKeyPair]("dropbox-appkey")
+      val dropboxConfig = SettingKey[File]("dropbox-config")
+  }
 
   lazy val settings = Seq(
-
     dropboxUpload <<= (streams, dropboxApi, uploadFile, uploadFolder) map { (s, api, file, folder) =>
       if (file == null || !file.exists) sys.error("file "+file+" does not exist")
       if (folder.isEmpty) sys.error("upload folder not set")
@@ -52,6 +57,6 @@ object Dropbox {
     deletePath := "",
     uploadFolder := "",
     dropboxConfig := new File(System.getProperty("user.home"), ".sbt-dropbox-plugin"),
-    dropboxAppKey := new AppKeyPair("7d20vctta697nbi", "a2i52ej60tq1j9y")
+    dropboxAppKey := new com.dropbox.client2.session.AppKeyPair("7d20vctta697nbi", "a2i52ej60tq1j9y")
   )
 }

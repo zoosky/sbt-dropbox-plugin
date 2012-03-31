@@ -1,4 +1,5 @@
-import scala.sys.process.Process
+package sbtdropbox
+
 import com.dropbox.client2._
 import com.dropbox.client2.session._
 import com.dropbox.client2.exception._
@@ -32,9 +33,9 @@ class DropboxAPI(appKey: AppKeyPair, token: AccessTokenPair) {
     api.metadata(if (path.startsWith("/")) path else "/"+path, 0, null, true, null).contents.asScala.toList
   }
 
-  def upload(path: String, file: File)(listener: (Long, Long) => Unit) = {
+  def upload(path: String, file: File)(listener: ((Long, Long) => Unit) = null) = {
     api.putFile(path, new FileInputStream(file), file.length, null, new ProgressListener {
-      override def onProgress(bytes: Long, total: Long) { listener(bytes, total) }
+      override def onProgress(bytes: Long, total: Long) { if (listener != null) listener(bytes, total) }
     })
   }
 
@@ -42,7 +43,6 @@ class DropboxAPI(appKey: AppKeyPair, token: AccessTokenPair) {
     tryOperation(404)(api.delete(path))
   }
 
-  def dumpFields(o: Object) = o.getClass.getDeclaredFields.map(f=>(f.getName, f.get(o))).foreach(println(_))
   def accountInfo = api.accountInfo()
 }
 
