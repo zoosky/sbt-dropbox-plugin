@@ -3,17 +3,19 @@ package sbtdropbox
 import sbt._
 import sbt.Keys._
 
+import com.dropbox.client2.DropboxAPI.Entry
+
 object Dropbox {
   import DropboxKeys._
 
   object DropboxKeys {
       import com.dropbox.client2.session.{AccessTokenPair, AppKeyPair}
 
-      val dropboxUpload = TaskKey[Unit]("dropbox-upload")
+      val dropboxUpload = TaskKey[Seq[Entry]]("dropbox-upload")
       val dropboxDelete = TaskKey[Unit]("dropbox-delete")
-      val dropboxList   = TaskKey[Unit]("dropbox-list")
+      val dropboxList   = TaskKey[Seq[Entry]]("dropbox-list")
 
-      val uploadFile   = TaskKey[File]("upload-file")
+      val uploadFiles  = TaskKey[Seq[File]]("upload-files")
       val uploadFolder = SettingKey[String]("upload-folder")
       val deletePath   = TaskKey[String]("delete-path")
       val dropboxApi   = TaskKey[DropboxAPI]("dropbox-api")
@@ -22,21 +24,25 @@ object Dropbox {
       val dropboxConfig = SettingKey[File]("dropbox-config")
   }
 
-  lazy val settings = Seq(
-    dropboxUpload <<= (streams, dropboxApi, uploadFile, uploadFolder) map { (s, api, file, folder) =>
-      if (file == null || !file.exists) sys.error("file "+file+" does not exist")
-      if (folder.isEmpty) sys.error("upload folder not set")
+  def uploadFile(api: DropboxAPI, folder: String, file: File, log: Logger, progress: Boolean = false) = {
+      log.info("uploading "+file+" to folder "+folder)
+      val start = System.currentTimeMillis
+      val entry = api.upload(folder+"/"+file.getName, file) { (b, t) => if (progress) print(".") }
+      if (progress) println()
+      log.success("uploaded file %s in %.2f secs".format(file, (System.currentTimeMillis-start)/1000.0))
+      entry
+  }
 
-      val level = Level.Debug
-      s.log.info("uploading "+file+" to folder "+folder)
-      api.createFolder(folder)
-      api.upload(folder+"/"+file.getName, file) { (b, t) =>
-        if (level == Level.Debug)
-          print(".")
+  lazy val settings = Seq(
+    dropboxUpload <<= (streams, dropboxApi, uploadFiles, uploadFolder) map { (s, api, files, folder) =>
+      if (!files.isEmpty) {
+        if (!folder.isEmpty) {
+          api.createFolder(folder)
+        }
+        files.map(uploadFile(api, folder, _, s.log))
+      } else {
+        Seq.empty
       }
-      if (level == Level.Debug) println()
-      s.log.success("uploaded file "+file)
-      ()
     },
 
     dropboxDelete <<= (streams, dropboxApi, deletePath) map { (s, api, path) =>
@@ -45,16 +51,16 @@ object Dropbox {
     },
 
     dropboxList <<= (streams, dropboxApi, uploadFolder) map { (s, api, folder) =>
-      for (e <- api.list(folder)) {
-        s.log.info(String.format("%s%s (%s) %s", e.root, e.path, e.size, e.modified))
-      }
+      val entries = api.list(folder)
+      entries.foreach(e => s.log.info(String.format("%s%s (%s) %s", e.root, e.path, e.size, e.modified)))
+      entries
     },
 
     dropboxToken <<= (dropboxAppKey, dropboxConfig) map (DropboxAPI.obtainToken(_)(_)),
     dropboxApi <<= (dropboxAppKey, dropboxToken) map (new DropboxAPI(_, _)),
 
-    uploadFile := null,
-    deletePath := "",
+    uploadFiles := Seq.empty,
+    deletePath   := "",
     uploadFolder := "",
     dropboxConfig := new File(System.getProperty("user.home"), ".sbt-dropbox-plugin"),
     dropboxAppKey := new com.dropbox.client2.session.AppKeyPair("3b02x88oi3bpa2x", "mwnxdopvusqxdyy")
