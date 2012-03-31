@@ -2,7 +2,7 @@
 
 Add the following to your `project/plugins.sbt`
 
-```
+```scala
 resolvers ++= Seq(
   Resolver.url("scalasbt", new URL("http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns),
   "dropbox sdk" at "http://jberkel.github.com/sbt-dropbox-plugin/releases"
@@ -13,7 +13,7 @@ addSbtPlugin("org.scala-sbt" % "sbt-dropbox-plugin" % "0.1.0")
 
 Then in your project build config:
 
-```
+```scala
 import sbtdropbox.Dropbox
 import sbtdropbox.Dropbox.DropboxKeys._
 
