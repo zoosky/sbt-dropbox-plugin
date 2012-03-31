@@ -2,25 +2,34 @@ import scala.sys.process.Process
 import com.dropbox.client2._
 import com.dropbox.client2.session._
 import com.dropbox.client2.exception._
+import com.dropbox.client2.DropboxAPI.Entry
 import java.util.Properties
 import java.io.{File, FileOutputStream, FileInputStream}
+import java.awt.Desktop
+import collection.JavaConverters._
 
 class DropboxAPI(appKey: AppKeyPair, token: AccessTokenPair) {
-  lazy val session = new WebAuthSession(appKey, Session.AccessType.APP_FOLDER, token)
-  lazy val api:com.dropbox.client2.DropboxAPI[WebAuthSession] = new com.dropbox.client2.DropboxAPI(session)
+  type DApi = com.dropbox.client2.DropboxAPI[WebAuthSession]
 
-  def createFolder(path: String, ignoreExisting: Boolean = true) = {
+  lazy val session = new WebAuthSession(appKey, Session.AccessType.APP_FOLDER, token)
+  lazy val api:DApi = new com.dropbox.client2.DropboxAPI(session)
+
+  def createFolder(path: String, ignoreExisting: Boolean = true):Option[Entry] = {
+    val codes = if (ignoreExisting) Seq(403) else Seq.empty
+
+    tryOperation(codes:_*)(api.createFolder(path))
+  }
+
+  def tryOperation[T](ignoreCodes: Int*)(operation:  => T):Option[T] = {
     try {
-      api.createFolder(path)
+      Some(operation)
     } catch {
-      case e: DropboxServerException if e.error == 403 => if (!ignoreExisting) throw e
-      case e: DropboxException => System.err.println(e)
+      case e: DropboxServerException if ignoreCodes.contains(e.error) => None
     }
   }
 
-  def list(path: String) = {
-    val entries = api.metadata(path, 0, null, true, null)
-    entries
+  def list(path: String):List[Entry] = {
+    api.metadata(if (path.startsWith("/")) path else "/"+path, 0, null, true, null).contents.asScala.toList
   }
 
   def upload(path: String, file: File)(listener: (Long, Long) => Unit) = {
@@ -29,33 +38,34 @@ class DropboxAPI(appKey: AppKeyPair, token: AccessTokenPair) {
     })
   }
 
-  def dumpFields(o: Object) = o.getClass.getDeclaredFields.map(f=>(f.getName, f.get(o))).foreach(println(_))
+  def delete(path: String) = {
+    tryOperation(404)(api.delete(path))
+  }
 
+  def dumpFields(o: Object) = o.getClass.getDeclaredFields.map(f=>(f.getName, f.get(o))).foreach(println(_))
   def accountInfo = api.accountInfo()
 }
 
 object DropboxAPI {
-  val appKey = new AppKeyPair("7d20vctta697nbi", "a2i52ej60tq1j9y")
-  val config = new File(System.getProperty("user.home"), ".sbt-dropbox-plugin")
   val accessTokenKey = "accessTokenPair.key"
   val accessTokenSecret = "accessTokenPair.secret"
 
-  def loadProps:Properties = {
+  def loadProps(implicit config: File):Properties = {
     val props = new Properties
     if (config.exists()) props.load(new FileInputStream(config))
     props
   }
 
-  def storeToken(token: AccessTokenPair) = {
-    val props = loadProps
+  def storeToken(token: AccessTokenPair)(implicit config: File) = {
+    val props = loadProps(config)
     props.setProperty(accessTokenKey, token.key)
     props.setProperty(accessTokenSecret, token.secret)
     props.store(new FileOutputStream(config), null)
     token
   }
 
-  def loadToken:Option[AccessTokenPair] = {
-    val props = loadProps
+  def loadToken(implicit config: File):Option[AccessTokenPair] = {
+    val props = loadProps(config)
     val (key, secret) = (props.getProperty(accessTokenKey), props.getProperty(accessTokenSecret))
     if (key != null && secret != null)
       Some(new AccessTokenPair(key, secret))
@@ -63,43 +73,34 @@ object DropboxAPI {
       None
   }
 
-  def obtainToken:AccessTokenPair = loadToken.getOrElse(storeToken(linkAccount))
-  def linkAccount:AccessTokenPair = {
+  def obtainToken(appKey: AppKeyPair)(implicit config: File):AccessTokenPair = loadToken.getOrElse(storeToken(linkAccount(appKey)))
+
+  def linkAccount(appKey: AppKeyPair):AccessTokenPair = {
       val was = new WebAuthSession(appKey, Session.AccessType.APP_FOLDER);
       val info = was.getAuthInfo
-      println("1. Go to: " + info.url)
-      println("2. Allow access to this app.")
-      println("3. Press ENTER.")
+      if (!openUrl(info.url))
+        println("Go to: " + info.url)
 
-      Process("open "+info.url) !
-
+      println("Allow access to this app and press ENTER")
       while (System.in.read() != '\n') {}
 
-      // This will fail if the user didn't visit the above URL and hit 'Allow'.
+      // This will fail if the user did not allow the app
       val uid = was.retrieveWebAccessToken(info.requestTokenPair)
       val accessToken = was.getAccessTokenPair
       accessToken
   }
 
-  def main(args: Array[String]) = {
-    val api = new DropboxAPI(appKey, obtainToken)
-
-    println(api.accountInfo.displayName)
-    println(api.accountInfo.uid)
-
-    val path = "/api-test"
-    api.createFolder(path)
-    val entries = api.list(path)
-    api.dumpFields(entries)
-
-    if (args.length > 0) {
-      val file = new File(args(0))
-      if (file.exists) {
-        println("uploading "+file)
-        api.upload(path+"/"+file.getName, file) { (bytes, total) =>
-        }
+  def openUrl(url: String):Boolean = {
+    if (!Desktop.isDesktopSupported()) {
+      false
+    } else {
+      val desktop = Desktop.getDesktop()
+      if (!desktop.isSupported(Desktop.Action.BROWSE)) {
+        false
+      } else {
+         desktop.browse(new java.net.URI(url))
+         true
       }
     }
-    System.exit(0)
   }
 }
