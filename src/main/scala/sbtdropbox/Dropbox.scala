@@ -9,28 +9,28 @@ object Dropbox {
   import DropboxKeys._
 
   object DropboxKeys {
-      import com.dropbox.client2.session.{AccessTokenPair, AppKeyPair}
+    import com.dropbox.client2.session.{AccessTokenPair, AppKeyPair}
 
-      val dropboxUpload = TaskKey[Seq[Entry]]("dropbox-upload")
-      val dropboxDelete = TaskKey[Unit]("dropbox-delete")
-      val dropboxList   = TaskKey[Seq[Entry]]("dropbox-list")
+    val dropboxUpload = TaskKey[Seq[Entry]]("dropbox-upload")
+    val dropboxDelete = TaskKey[Unit]("dropbox-delete")
+    val dropboxList   = TaskKey[Seq[Entry]]("dropbox-list")
 
-      val dropboxFiles  = TaskKey[Seq[File]]("dropbox-files")
-      val dropboxFolder = SettingKey[String]("dropbox-folder")
-      val dropboxDeletePath   = TaskKey[String]("dropbox-delete-path")
-      val dropboxApi   = TaskKey[DropboxAPI]("dropbox-api")
-      val dropboxToken = TaskKey[AccessTokenPair]("dropbox-access-token")
-      val dropboxAppKey = SettingKey[(String, String)]("dropbox-appkey")
-      val dropboxConfig = SettingKey[File]("dropbox-config")
+    val dropboxFiles  = TaskKey[Seq[File]]("dropbox-files")
+    val dropboxFolder = SettingKey[String]("dropbox-folder")
+    val dropboxDeletePath   = TaskKey[String]("dropbox-delete-path")
+    val dropboxApi   = TaskKey[DropboxAPI]("dropbox-api")
+    val dropboxToken = TaskKey[AccessTokenPair]("dropbox-access-token")
+    val dropboxAppKey = SettingKey[(String, String)]("dropbox-appkey")
+    val dropboxConfig = SettingKey[File]("dropbox-config")
   }
 
   def uploadFile(api: DropboxAPI, folder: String, file: File, log: Logger, progress: Boolean = false) = {
-      log.info("uploading "+file+" to folder "+folder)
-      val start = System.currentTimeMillis
-      val entry = api.upload(folder+"/"+file.getName, file) { (b, t) => if (progress) print(".") }
-      if (progress) println()
-      log.success("uploaded file %s in %.2f secs".format(file, (System.currentTimeMillis-start)/1000.0))
-      entry
+    log.info("uploading "+file+" to folder "+folder)
+    val start = System.currentTimeMillis
+    val entry = api.upload(folder+"/"+file.getName, file) { (b, t) => if (progress) print(".") }
+    if (progress) println()
+    log.success("uploaded file %s in %.2f secs".format(file, (System.currentTimeMillis-start)/1000.0))
+    entry
   }
 
   lazy val settings = Seq(
