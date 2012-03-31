@@ -2,7 +2,7 @@ name := "sbt-dropbox-plugin"
 
 organization := "org.scala-sbt"
 
-version := "0.0.1"
+version := "0.1.0"
 
 scalacOptions += "-deprecation"
 
